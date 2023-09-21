@@ -4,6 +4,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
+#include <stdbool.h>
 
 #include <time.h>
 #include <sched.h>
@@ -14,13 +16,14 @@
 
 #define PROCESS_NUM 2
 #define PAGE_SIZE 4096
-#define MEMORY_SIZE 4000000000
-// #define MEMORY_SIZE 40000
+// #define MEMORY_SIZE 4000000000
+#define MEMORY_SIZE 400000000
 void*address_list;
 
 #define OP_FAIL 2
 #define MEMORY_FAULT 3
-#define SUCCESS 4
+#define SUCCESS 1
+#define FAIL 0
 
 /* Random number generator taking current time as the seed*/
 long int random()
@@ -104,6 +107,75 @@ int logical()
         return 0;
 }
 
+/* N queens ALGORITHM */
+int N ;     // Change N to the desired board size
+int count = 0;
+int M = 12;
+int solution_array[] = {1,0,0,2,10,4,40,92,352,724,2680,14200};
+// Function to check if it's safe to place a queen at board[row][col]
+bool isSafe(int board[N][N], int row, int col) {
+    // Check row on the left side
+    for (int i = 0; i < col; i++) {
+        if (board[row][i]) {
+            return false;
+        }
+    }
+
+    // Check upper diagonal on the left side
+    for (int i = row, j = col; i >= 0 && j >= 0; i--, j--) {
+        if (board[i][j]) {
+            return false;
+        }
+    }
+
+    // Check lower diagonal on the left side
+    for (int i = row, j = col; i < N && j >= 0; i++, j--) {
+        if (board[i][j]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// Function to solve the N-Queens problem
+bool solveNQueens(int board[N][N], int col) {
+    // Base case: If all queens are placed
+    if (col >= N) {
+        // printBoard(board);
+        count++;
+        return true;
+    }
+
+    bool result = false;
+
+    for (int i = 0; i < N; i++) {
+        if (isSafe(board, i, col)) {
+            board[i][col] = 1;
+
+            // Recur to place the rest of the queens
+            result = solveNQueens(board, col + 1) || result;
+
+            // If placing a queen in board[i][col] doesn't lead to a solution,
+            // then remove the queen from board[i][col]
+            board[i][col] = 0;
+        }
+    }
+
+    return result;
+}
+
+/* Driver Function to run N-Queens Algorithm */
+int driver(int N) 
+{
+    int board[N][N]; // Initialize the chessboard
+    memset(board, 0 , N*N*sizeof(int));
+    if (!solveNQueens(board, 0)) {
+        // printf("No solution exists.\n");
+    }
+    // printf("%d\n",count);
+    return count;
+}
 
 /* function to find the physical address corresponding to a given virtual address pointer*/
 unsigned long long physical_address(void* virtualAddress)
@@ -188,6 +260,7 @@ int task(int cpu, int mem_div)
         {
             printf("Basic Ops Failed");
             return OP_FAIL;
+            exit(FAIL);
         } 
     }
     printf("Basic Ops Success\n");
@@ -198,6 +271,7 @@ int task(int cpu, int mem_div)
     {
         printf("Failed to allocate memory.\n");
         return 1;
+        exit(FAIL);
     }
     // physical_address(virtualAddress);
     // sphysical_address(temp_adress);
@@ -211,6 +285,7 @@ int task(int cpu, int mem_div)
         {
             // printf("fault detected \n",temp_adress);
             return MEMORY_FAULT;
+            exit(FAIL);
         }   
         temp_adress++;
     }
@@ -229,10 +304,36 @@ int main()
         if((pid[i]= fork())== 0 )
         {
             //children
-            task(i,2);
+            task(i,PROCESS_NUM);
             printf("executed process %d\n", getpid());
             exit(i);
         }
+    }
+
+    int green_flag = 0;
+    for(int i = 1 ; i<=M; i++)
+    {
+        count = 0;
+        N=i;        
+        if(solution_array[i-1]!=driver(N))
+        {
+            // printf("NOO!\n");
+            // printf("%d ----- %d\n",solution_array[i-1],driver(N));
+            green_flag = 0;
+            return FAIL;
+            exit(FAIL);
+        }
+        green_flag = 1;
+    }
+    if(green_flag==1)
+    {
+        printf("Executed N_Queens Algorithm Successfully\n");
+    }
+    else
+    {
+        printf("N_Queens Algorithm Failed\n");
+        return FAIL;
+        exit(FAIL);
     }
 
     for (int i=0;i<PROCESS_NUM;i++)
@@ -247,5 +348,7 @@ int main()
 
     double diff = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec)*pow(10,-9);
     printf("time taken %f seconds\n", diff);
-    return 0;
+    exit(SUCCESS);
+    return SUCCESS;
+
 }
