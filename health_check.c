@@ -32,6 +32,7 @@ void getCPUInfo()
     fclose(fp);
 }
 
+
 // Function to read and parse /proc/meminfo to get memory information
 void getMemoryInfo() 
 {
@@ -60,6 +61,7 @@ void getMemoryInfo()
     fclose(fp);
 }
 
+
 // Function to count the number of running processes
 int countRunningProcesses() 
 {
@@ -83,34 +85,6 @@ int countRunningProcesses()
     
     return count;
 }
-
-// Function to count the number of threads in the current process
-int countThreads() 
-{
-    int count = 0;
-    char buffer[MAX_BUF_SIZE];
-    FILE *fp;
-    char line[256];
-
-    // fp = fopen("/proc/self/status", "r");  // threads in current process
-    fp = popen("ps -eo nlwp | tail -n +2 | awk '{ num_threads += $1 } END { print num_threads }'","r");
-    if (fp == NULL) 
-    {
-        perror("Error executing ps command");
-        return -1;
-    }
-
-    if (fgets(buffer, sizeof(buffer), fp)) 
-    {
-        count = atoi(buffer);
-    }
-
-    pclose(fp);
-    return count;
-}
-
- 
-
 
 
 // Function to calculate CPU usage for a specific core
@@ -216,4 +190,3 @@ int main()
     return 0;
     
 }
-
