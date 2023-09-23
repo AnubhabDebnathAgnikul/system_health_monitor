@@ -2,10 +2,11 @@
 #include<stdlib.h>
 #include<pthread.h>
 #include <string.h>
+#include <dirent.h>
 
 #define MAX_BUF_SIZE 128
 #define NUM_CORES 4 // Change this to match the number of CPU cores on the target system
-
+unsigned long long total_time[NUM_CORES][2]={0}, idle_time[NUM_CORES][2]={0};
 
 // Function to read and parse /proc/cpuinfo to get CPU information
 void getCPUInfo() 
@@ -34,7 +35,7 @@ void getCPUInfo()
 
 
 // Function to read and parse /proc/meminfo to get memory information
-void getMemoryInfo() 
+void get_memory_info() 
 {
     FILE *fp;
     char buffer[MAX_BUF_SIZE];
@@ -61,131 +62,148 @@ void getMemoryInfo()
     fclose(fp);
 }
 
-
-// Function to count the number of running processes
-int countRunningProcesses() 
+/* Function to get max number of processes*/
+int max_processes()
 {
     FILE *fp;
-    char buffer[MAX_BUF_SIZE];
-    int count = 0;
-    
-    fp = popen("ps -e | wc -l", "r");
-    if (fp == NULL) 
-    {
-        perror("Error executing ps command");
-        return -1;
+    char filename[] = "/proc/sys/kernel/pid_max";
+    int pid_max;
+
+    // Open the file for reading
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Failed to open /proc/sys/kernel/pid_max");
+        exit(EXIT_FAILURE);
     }
 
-    if (fgets(buffer, sizeof(buffer), fp)) 
-    {
-        count = atoi(buffer);
+    if (fscanf(fp, "%d", &pid_max) != 1) {
+        perror("Failed to read value from /proc/sys/kernel/pid_max");
+        fclose(fp);
+        exit(EXIT_FAILURE);
     }
 
-    pclose(fp);
+    printf("Max allowed processes: %d\n",pid_max);
+    // Close the file
+    fclose(fp);
+
+    return pid_max;
+}
+
+// Function to count the number of running processes
+int count_running_processes() 
+{
+    DIR *dir;
+    struct dirent *entry;
+    int process_count = 0;
+
     
-    return count;
+    // Open the /proc directory
+    dir = opendir("/proc");
+
+    if (dir == NULL) {
+        perror("opendir");
+        exit(EXIT_FAILURE);
+    }
+
+    // Iterate through the directory entries
+    while ((entry = readdir(dir))) {
+        // Check if the entry is a directory and its name is numeric (a process directory)
+        if (entry->d_type == DT_DIR && atoi(entry->d_name) != 0) {
+            process_count++;
+        }
+    }
+    max_processes();
+    printf("Number of running processes %d\n", process_count);
+    // Close the directory
+    closedir(dir);  
+    return process_count;
 }
 
 
 // Function to calculate CPU usage for a specific core
-void* calculate_cpu_usage(void* arg) {
-    int core_id = *((int*)arg);
-    FILE* file = NULL;
-    char filename[128];
-    unsigned long long total_time[2], idle_time[2];
-
-    snprintf(filename, sizeof(filename), "/proc/stat");
-
-    while (1) 
+int calculate_cpu_usage(int core_id)
+{       
+    FILE* fp = fopen("/proc/stat","r");
+    if (fp == NULL) 
     {
-        file = fopen(filename, "r");
-        if (file == NULL) 
-        {
-            perror("fopen");
-            exit(1);
-        }
-
-        char line[256];
-        char* cpu_line = NULL;
-        while (fgets(line, sizeof(line), file)) 
-        {
-            if (line[0] == 'c' && line[1] == 'p' && line[2] == 'u' && line[3] == core_id + '0') 
+        perror("Failed to open");
+        exit(1);
+    }
+    char line[256];
+    char* cpu_line = NULL;
+    while(fgets(line,sizeof(line),fp))
+    {
+        if (line[0] == 'c' && line[1] == 'p' && line[2] == 'u' && line[3] == core_id + '0') 
             {
                 cpu_line = line;
                 break;
             }
-        }
-        fclose(file);
-
-        if (cpu_line) 
+    }
+    fclose(fp);
+    if (cpu_line) 
         {
-            unsigned long long user, nice, system, idle;
-            sscanf(cpu_line, "cpu%d %llu %llu %llu %llu", &core_id, &user, &nice, &system, &idle);
-
-            total_time[1] = user + nice + system + idle;
-            idle_time[1] = idle;
-
-            if (total_time[0] > 0) 
+            unsigned long long user = 0, nice = 0, system = 0, idle = 0, numbers[7],sum=0;
+            char* ptr = NULL;
+            char* token= strtok_r(cpu_line," ",&ptr);
+            for (int i = 0; i < 4; i++) 
             {
-                unsigned long long total_delta = total_time[1] - total_time[0];
-                unsigned long long idle_delta = idle_time[1] - idle_time[0];
+                token = strtok_r(NULL, " ",&ptr);
+                if (token == NULL) 
+                {
+                    printf("Not enough tokens in the line\n");
+                    break;
+                }
+                switch (i) {
+                    case 0:
+                        user = strtoull(token, NULL, 10);
+                        break;
+                    case 1:
+                        nice = strtoull(token, NULL, 10);
+                        break;
+                    case 2:
+                        system = strtoull(token, NULL, 10);
+                        break;
+                    case 3:
+                        idle = strtoull(token, NULL, 10);
+                        break;
+                }
+            }   
+                        
+            total_time[core_id][1] = user + nice + system + idle;
+
+            idle_time[core_id][1] = idle;
+
+            if (total_time[core_id][0] >= 0) 
+            {
+                unsigned long long total_delta = total_time[core_id][1] - total_time[core_id][0];
+                
+                unsigned long long idle_delta = idle_time[core_id][1] - idle_time[core_id][0];
                 double usage = 100.0 * (1.0 - ((double)idle_delta / (double)total_delta));
 
                 printf("Core %d CPU Usage: %.2f%%\n", core_id, usage);
             }
 
-            total_time[0] = total_time[1];
-            idle_time[0] = idle_time[1];
+            total_time[core_id][0] = total_time[core_id][1];
+            idle_time[core_id][0] = idle_time[core_id][1];
         }
-        sleep(1); // Sleep for 1 second before checking again
-        
-        // system("clear"); 
-    }
-}
-
-
-void *monitor() 
-{
-    while(1)
-    {
-        // printf("CPU Health Monitor\n");
-
-        // Get CPU information
-        // getCPUInfo();
-
-        // Get memory information
-        getMemoryInfo();
-
-        // Get the number of running processes
-        int runningProcesses = countRunningProcesses();
-        if (runningProcesses >= 0) 
-        {
-            printf("Running Processes: %d\n", runningProcesses);
-        }
-
-        usleep(1000000);
-        // system("clear");
-    }
-
     return 0;
 }
 
+/* driver */
 int main() 
 {
-    pthread_t threads[NUM_CORES+1];
-    int core_ids[NUM_CORES];
     
-    for (int i = 0; i < NUM_CORES; i++) 
-    {
-        core_ids[i] = i;
-        pthread_create(&threads[i], NULL, calculate_cpu_usage, &core_ids[i]);
-    }
-    pthread_create(&threads[NUM_CORES], NULL, monitor, NULL);
-
-    for (int i = 0; i < NUM_CORES; i++) 
-    {
-        pthread_join(threads[i], NULL);
-    }
+    while(1)
+   {
+        get_memory_info();
+        count_running_processes();
+        for(int i=0; i<NUM_CORES;i++)
+        {
+            calculate_cpu_usage(i);
+        }
+        printf("\n\n");
+        usleep(1000000);
+   }
 
     return 0;
     
