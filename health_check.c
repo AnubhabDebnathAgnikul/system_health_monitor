@@ -4,8 +4,10 @@
 #include <string.h>
 #include <dirent.h>
 
+#include "functions.h"
+
 #define MAX_BUF_SIZE 128
-#define NUM_CORES 4 // Change this to match the number of CPU cores on the target system
+#define NUM_CORES 2 // Change this to match the number of CPU cores on the target system
 unsigned long long total_time[NUM_CORES][2]={0}, idle_time[NUM_CORES][2]={0};
 
 // Function to read and parse /proc/cpuinfo to get CPU information
@@ -190,21 +192,21 @@ int calculate_cpu_usage(int core_id)
 }
 
 /* driver */
-int main() 
-{
+// int main() 
+// {
     
-    while(1)
-   {
-        get_memory_info();
-        count_running_processes();
-        for(int i=0; i<NUM_CORES;i++)
-        {
-            calculate_cpu_usage(i);
-        }
-        printf("\n\n");
-        usleep(1000000);
-   }
+//     while(1)
+//    {
+//         get_memory_info();
+//         count_running_processes();
+//         for(int i=0; i<NUM_CORES;i++)
+//         {
+//             calculate_cpu_usage(i);
+//         }
+//         printf("\n\n");
+//         usleep(1000000);
+//    }
 
-    return 0;
+//     return 0;
     
-}
+// }

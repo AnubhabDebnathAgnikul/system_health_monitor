@@ -6,6 +6,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdbool.h>
+#include <syslog.h>
 
 #include <time.h>
 #include <sched.h>
@@ -14,16 +15,28 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define PROCESS_NUM 2
-#define PAGE_SIZE 4096
-// #define MEMORY_SIZE 4000000000
-#define MEMORY_SIZE 400000000
-void*address_list;
 
-#define OP_FAIL 2
-#define MEMORY_FAULT 3
-#define SUCCESS 1
-#define FAIL 0
+#include "functions.h"
+
+
+/* Driver Function to run N-Queens Algorithm */
+/* N queens ALGORITHM */
+int N ;     // Change N to the desired board size
+int count = 0;
+int M = 12;
+int solution_array[] = {1,0,0,2,10,4,40,92,352,724,2680,14200};
+
+// #define PROCESS_NUM 2
+// #define PAGE_SIZE 4096
+// // #define MEMORY_SIZE 4000000000
+// #define MEMORY_SIZE 400000000
+// void*address_list;
+
+// #define OP_FAIL 2
+// #define MEMORY_FAULT 3
+// #define SUCCESS 1
+// #define FAIL 0
+// #define MAX_BUF_SIZE 256
 
 /* Random number generator taking current time as the seed*/
 long int random()
@@ -107,11 +120,11 @@ int logical()
         return 0;
 }
 
-/* N queens ALGORITHM */
-int N ;     // Change N to the desired board size
-int count = 0;
-int M = 12;
-int solution_array[] = {1,0,0,2,10,4,40,92,352,724,2680,14200};
+// /* N queens ALGORITHM */
+// int N ;     // Change N to the desired board size
+// static int count = 0;
+// int M = 12;
+// int solution_array[] = {1,0,0,2,10,4,40,92,352,724,2680,14200};
 // Function to check if it's safe to place a queen at board[row][col]
 bool isSafe(int board[N][N], int row, int col) {
     // Check row on the left side
@@ -166,8 +179,9 @@ bool solveNQueens(int board[N][N], int col) {
 }
 
 /* Driver Function to run N-Queens Algorithm */
-int driver(int N) 
+int driver(int localN) 
 {
+    N = localN;
     int board[N][N]; // Initialize the chessboard
     memset(board, 0 , N*N*sizeof(int));
     if (!solveNQueens(board, 0)) {
@@ -177,6 +191,58 @@ int driver(int N)
     return count;
 }
 
+/* checka n queens for N=0 to 12*/
+int queens_check()
+{
+    int green_flag = 0;
+    for(int i = 1 ; i<=M; i++)
+    {
+        count = 0;
+        N=i;        
+        if(solution_array[i-1]!=driver(N))
+        {
+            // printf("NOO!\n");
+            // printf("%d ----- %d\n",solution_array[i-1],driver(N));
+            green_flag = 0;
+            return FAIL;
+            // exit(FAIL);
+        }
+        green_flag = 1;
+    }
+    return green_flag;
+}
+
+/*UART info*/
+// int UART_info()
+// {
+//     FILE *fp;
+//     char filename[] = "/etc/inittab";
+//     char buffer[MAX_BUF_SIZE];
+//     int flag = 1;
+
+//     //open file for reading
+//     fp = fopen(filename,"r");
+//     if(fp==NULL)
+//     {
+//         perror("failed to open /etc/inittab");
+//         // exit(FAIL);
+//     }
+
+//     while(fgets(buffer,sizeof(buffer),fp))
+//     {
+//         if(strstr(buffer,"tty"))
+//         {
+//             if(buffer[0]!='#')
+//             {
+//                 flag=0;
+//             }
+//         }
+//     }
+//     return flag;
+// }
+
+
+
 /* function to find the physical address corresponding to a given virtual address pointer*/
 unsigned long long physical_address(void* virtualAddress)
 {
@@ -184,7 +250,8 @@ unsigned long long physical_address(void* virtualAddress)
     int pagemap_fd = open("/proc/self/pagemap", O_RDONLY);
     if (pagemap_fd < 0) 
     {
-        printf("Failed to open pagemap file.\n");
+        // printf("Failed to open pagemap file.\n");
+        syslog(LOG_CRIT,"Failed to open pagemap file");
         return 1;
     }
 
@@ -195,14 +262,16 @@ unsigned long long physical_address(void* virtualAddress)
     off_t offset = virtualPageNumber * sizeof(unsigned long long);
     if (lseek(pagemap_fd, offset, SEEK_SET) == -1) 
     {
-        printf("Failed to seek to the pagemap entry.\n");
+        // printf("Failed to seek to the pagemap entry.\n");
+        syslog(LOG_CRIT,"Failed to seek to the pagemap entry");
         return 1;
     }
 
     // Read the entry from the pagemap file
     unsigned long long pagemapEntry;
     if (read(pagemap_fd, &pagemapEntry, sizeof(unsigned long long)) == -1) {
-        printf("Failed to read the pagemap entry.\n");
+        // printf("Failed to read the pagemap entry.\n");
+        syslog(LOG_CRIT,"Failed to read the pagemap entry");
         return 1;
     }
     // printf("page entry: %0llx\n",pagemapEntry);
@@ -213,8 +282,10 @@ unsigned long long physical_address(void* virtualAddress)
     unsigned long long physicalAddress = (physicalPageNumber * PAGE_SIZE) +
                                          ((unsigned long long)virtualAddress % PAGE_SIZE);
 
-    printf("Virtual Address: %p\n", virtualAddress);
-    printf("Physical Address: %llx\n", physicalAddress);
+    // printf("Virtual Address: %p\n", virtualAddress);
+    // printf("Physical Address: %llx\n", physicalAddress);
+    syslog(LOG_CRIT,"Virtual Address: %p\n", virtualAddress);
+    syslog(LOG_CRIT,"Physical Address: %llx\n", physicalAddress);
     return physicalAddress;
 
     // Cleanup
@@ -225,6 +296,7 @@ unsigned long long physical_address(void* virtualAddress)
 /* March Pattern test on a meomry block pointed by the argument pointer*/
 int march(unsigned char*p)
 {
+    // syslog(LOG_INFO,"running march pattern test in memory");
     int x =1,flag=0;
     unsigned char a[8] = {1,2,4,8,16,32,64,128}; // hardcoded array for comparison
     for(int k=0;k<8;k++)
@@ -234,7 +306,8 @@ int march(unsigned char*p)
         if(*p!=a[k])
         {
             flag=1;
-            printf("Fault Dtected \n");
+            // printf("Fault Dtected \n");
+            syslog(LOG_CRIT,"MARCH PATTERN TEST: FAULT DETECTED");
             physical_address(p);
         }       
     }
@@ -243,33 +316,47 @@ int march(unsigned char*p)
 
 /* assigns the cpu and memory division factor
 dynamically allocates memory and calls march test 
-on the specified memory block*/
+on the specified memory block
+also runs basic ops */
 int task(int cpu, int mem_div)
 {
-    
+    // syslog(LOG_INFO,"running march pattern test in memory");
     cpu_set_t set;
     CPU_ZERO(&set);
     CPU_SET(cpu,&set);
     sched_setaffinity(getpid(),sizeof(cpu_set_t),&set);
-    printf("executing in cpu: %d ",cpu);
+    // printf("executing in cpu: %d ",cpu);
+    syslog(LOG_INFO,"executing in cpu: %d ",cpu);
 
     for(int i=0;i<100;i++)
     {
         // printf("check %d\n",i);
         if(swap()!=1 || trig()!=1 || logical()!=1)
         {
-            printf("Basic Ops Failed");
+            // printf("Basic Ops Failed");
+            syslog(LOG_CRIT,"Basic Ops Failed");
             return OP_FAIL;
             exit(FAIL);
         } 
     }
-    printf("Basic Ops Success\n");
+    // printf("Basic Ops Success\n");
+    syslog(LOG_INFO, "Basic Ops Success");
+
+    // if(UART_info()==1)
+    // {
+    //     printf("serial (UART) disabled");
+    // }
+    // else
+    // {
+    //     printf("serial (UART) enabled");
+    // }
 
     void* virtualAddress = malloc(MEMORY_SIZE/mem_div);
     unsigned char* temp_adress = virtualAddress;
     if (virtualAddress == NULL) 
     {
-        printf("Failed to allocate memory.\n");
+        // printf("Failed to allocate memory.\n");
+        syslog(LOG_CRIT,"Failed to allocate memory");
         return 1;
         exit(FAIL);
     }
@@ -292,48 +379,23 @@ int task(int cpu, int mem_div)
     free(virtualAddress);
 }
 
-int main()
+
+int task_driver()
 {
     pid_t pid[PROCESS_NUM];
     int main_pid = getpid(),status;
-    // printf("parent process: %d\n",main_pid);
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+
     for (int i=0; i<PROCESS_NUM;i++)
     {
         if((pid[i]= fork())== 0 )
         {
             //children
             task(i,PROCESS_NUM);
-            printf("executed process %d\n", getpid());
+            // printf("executed process %d\n", getpid());
+            syslog(LOG_INFO, "Executed memory and basic Ops");
+            // return 0;
             exit(i);
         }
-    }
-
-    int green_flag = 0;
-    for(int i = 1 ; i<=M; i++)
-    {
-        count = 0;
-        N=i;        
-        if(solution_array[i-1]!=driver(N))
-        {
-            // printf("NOO!\n");
-            // printf("%d ----- %d\n",solution_array[i-1],driver(N));
-            green_flag = 0;
-            return FAIL;
-            exit(FAIL);
-        }
-        green_flag = 1;
-    }
-    if(green_flag==1)
-    {
-        printf("Executed N_Queens Algorithm Successfully\n");
-    }
-    else
-    {
-        printf("N_Queens Algorithm Failed\n");
-        return FAIL;
-        exit(FAIL);
     }
 
     for (int i=0;i<PROCESS_NUM;i++)
@@ -344,11 +406,32 @@ int main()
             // printf("Child %d terminated with exit status %d\n", cpid,WEXITSTATUS(status));
         }
     }
-    clock_gettime(CLOCK_MONOTONIC, &end);
+}
 
-    double diff = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec)*pow(10,-9);
-    printf("time taken %f seconds\n", diff);
-    exit(SUCCESS);
-    return SUCCESS;
 
+/*checka proc/sys/kernel/printk file*/
+int check_printk()
+{
+    FILE *fp;
+    char buffer[MAX_BUF_SIZE];
+
+    fp = fopen("/proc/sys/kernel/printk", "r");
+
+    if(fp==NULL)
+    {
+        perror("error opening /proc/sys/kernel/printk");
+        return 0;
+    }
+
+    while(fgets(buffer, sizeof(buffer),fp))
+    {
+        if(buffer[0]=='0' && buffer[2]=='0' && buffer[4]=='0' && buffer[6]=='0')
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
 }
