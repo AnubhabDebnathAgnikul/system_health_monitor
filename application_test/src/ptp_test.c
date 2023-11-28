@@ -107,9 +107,10 @@ int ptp_check(void)
             /**< Return from the function. */
             if (offset > 0.001)
             {
+                close(fd);
                 return -1;
             }
-
+            close(fd);
             return 0;
         }
         close(fd);

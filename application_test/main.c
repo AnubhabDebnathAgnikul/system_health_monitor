@@ -1,9 +1,13 @@
 #include "inc/common.h"
 #include <stdio.h>
+#include <string.h>
+
+char folder_path[200];
 
 int main(int argc, char **argv)
 {
-    /**< Ping */
+    strcpy(folder_path, argv[1]);
+
     char *reference = "d74f497e31694f7e31e14bce1fac57d9231afb726f293f500ae4b79db1507b1b";
     char *path = "FC-Release";
 
