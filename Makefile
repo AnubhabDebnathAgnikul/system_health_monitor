@@ -9,14 +9,6 @@ all:
 	@$(CC) $(object) -o main -lm
 	
 clean:
-	@if [ -f main ]; then\
-		rm main;\
-		echo "previous main file removed";\
-	fi
-rebuild:
-	@if [ -f main ]; then\
-		rm main;\
-		echo "previous main file removed";\
-	fi
-	@$(CC) $(object) -o main -lm;\
-	echo "main file rebuilt";\
+	rm -rf main 
+
+rebuild: clean all
