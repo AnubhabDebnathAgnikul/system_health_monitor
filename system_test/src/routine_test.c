@@ -15,8 +15,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
-#include "functions.h"
+#include "../inc/common.h"
 
 
 /* Driver Function to run N-Queens Algorithm */

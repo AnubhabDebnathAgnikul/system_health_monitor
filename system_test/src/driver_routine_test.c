@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include <syslog.h>
-#include "functions.h"
+#include "../inc/common.h"
 
 int main()
 {
