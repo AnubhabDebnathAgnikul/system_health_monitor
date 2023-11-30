@@ -9,12 +9,12 @@ C_FILES += src/ping_test.c
 C_FILES += src/ptp_test.c
 
 all: $(C_FILES)
-	@$(CC) $(object) -o main -lm $(C_FILES)
+	@$(CC) $(object) -o app_test -lm $(C_FILES)
 	
 send:
 	sshpass -p 'root' scp main root@1.1.1.22:~/
 
 clean:
-	rm -rf main 
+	rm -rf app_test 
 
 rebuild: clean all

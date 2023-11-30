@@ -46,6 +46,7 @@ extern int N;
 extern int count;
 extern int M;
 extern int solution_array[12];
+extern void *address_list;
 
 /*checka proc/sys/kernel/printk file*/
 int check_printk();
