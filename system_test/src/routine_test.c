@@ -24,6 +24,7 @@ int N ;     // Change N to the desired board size
 int count = 0;
 int M = 12;
 int solution_array[] = {1,0,0,2,10,4,40,92,352,724,2680,14200};
+void *address_list;
 
 // #define PROCESS_NUM 2
 // #define PAGE_SIZE 4096

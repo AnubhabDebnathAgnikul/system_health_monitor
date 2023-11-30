@@ -3,12 +3,16 @@
 #include <syslog.h>
 #include "../inc/common.h"
 
+#define TESTING 1
+
 int main()
 {
     struct timespec start, end;
     openlog("Initial Checkup", LOG_NDELAY, LOG_USER);
     
+    #if TESTING
     clock_gettime(CLOCK_MONOTONIC, &start);
+    #endif 
 
     task_driver();
 
@@ -37,11 +41,12 @@ int main()
     }
 
     closelog();
-    clock_gettime(CLOCK_MONOTONIC, &end);
 
+    #if TESTING
+    clock_gettime(CLOCK_MONOTONIC, &end);
     double diff = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec)*pow(10,-9);
     printf("time taken %f seconds\n", diff);
-    exit(SUCCESS);
-    return SUCCESS;
+    #endif
 
+    return SUCCESS;
 }
