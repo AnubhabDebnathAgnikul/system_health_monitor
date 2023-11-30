@@ -9,9 +9,9 @@ C_FILES += src/ping_test.c
 C_FILES += src/ptp_test.c
 
 all: $(C_FILES)
-	@$(CC) $(object) -o main -lm $(C_FILES)
+	@$(CC) $(object) -o app_test -lm $(C_FILES)
 	
 clean:
-	rm -rf main 
+	rm -rf app_test 
 
 rebuild: clean all

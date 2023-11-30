@@ -18,7 +18,7 @@
 #define PAGE_SIZE 4096
 // #define MEMORY_SIZE 4000000000
 #define MEMORY_SIZE 400000000
-void*address_list;
+
 
 #define OP_FAIL 2
 #define MEMORY_FAULT 3
@@ -44,6 +44,7 @@ extern int N;
 extern int count;
 extern int M;
 extern int solution_array[12];
+extern void *address_list;
 
 /*checka proc/sys/kernel/printk file*/
 int check_printk();

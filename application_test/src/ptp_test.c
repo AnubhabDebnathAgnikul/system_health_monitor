@@ -16,9 +16,10 @@ static int read_line_from_fd(int fd, int size, char *line);
 
 int ptp_check(void)
 {
+    strcat(folder_path, "ptp_log_stream");
     while (1)
     {
-        int fd = open("ptp_log_stream", O_RDONLY);
+        int fd = open(folder_path, O_RDONLY);
 
         if (fd <= 0)
         {
