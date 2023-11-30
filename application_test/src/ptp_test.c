@@ -18,11 +18,24 @@ int ptp_check(void)
 {
     while (1)
     {
-        int fd = open("ptp_log_stream", O_RDONLY);
+        char path[100];
+        if (this_computer == sys_ec)
+        {
+            strcpy(path, folder_path);
+            strcat(path, "/files/ec/ptp_log_stream");
+        }
+        
+        if (this_computer == sys_fc)
+        {
+            strcpy(path, folder_path);
+            strcat(path, "/files/ptp_log_stream");
+        }
+
+        int fd = open(path, O_RDONLY);
 
         if (fd <= 0)
         {
-            printf("Opening the ptp log file has failed\n");
+            syslog(LOG_NOTICE, "Opening the ptp log file has failed\n");
             return -1;
         }
 
@@ -54,7 +67,7 @@ int ptp_check(void)
                 else
                 {
                     /**< Select has failed. Check why*/
-                    printf("Select has failed, errno = %d\n", errno);
+                    syslog(LOG_NOTICE, "PTP-Test: Select has failed, errno = %d\n", errno);
                     return -2;
                 }
 
@@ -64,7 +77,7 @@ int ptp_check(void)
             if (retval == 0)
             {
                 /**< Timeout has happened. */
-                printf("Timeout occured\n");
+                syslog(LOG_NOTICE, "PTP-Test: Timeout occured\n");
                 close(fd);
                 return -3;
             }
@@ -83,7 +96,7 @@ int ptp_check(void)
 
             if (value == NULL) 
             {
-                printf("unable to find ptp offset column\n");
+                syslog(LOG_NOTICE, "PTP-Test: unable to find ptp offset column\n");
                 break;
             }
 
@@ -93,7 +106,7 @@ int ptp_check(void)
 
             if (offset == 0 && errno != 0) 
             {
-                printf("unable to convert ptp offset float\n");
+                syslog(LOG_NOTICE, "PTP-Test: unable to convert ptp offset float\n");
                 break;
             }
 
@@ -102,7 +115,7 @@ int ptp_check(void)
                 offset = -offset;
             }
 
-            printf("Offset = %f\n", offset);
+            syslog(LOG_NOTICE, "PTP-Test: Offset = %f\n", offset);
 
             /**< Return from the function. */
             if (offset > 0.001)
@@ -126,7 +139,7 @@ static int read_line_from_fd(int fd, int size, char *line)
         
         if (status <= 0)
         {
-            printf("Unable to read\n");
+            syslog(LOG_NOTICE, "PTP-Test: Unable to read\n");
             return -1;
         }
 

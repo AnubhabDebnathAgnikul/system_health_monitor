@@ -3,20 +3,43 @@
 #include <errno.h>
 #include <string.h>
 
-int check_sha256sum(char *reference, char *path)
+int check_sha256sum(void)
 {
-    char command[100];
-    sprintf(command, "sha256sum %s", path); 
+    char command[1000];
+    
+    /**< Compute cksm from be binary. */
+    if (this_computer == sys_ec)
+    {
+        sprintf(command, "sha256sum %s/%s", folder_path, "EC-Release");
+    }
+    else
+    {
+        sprintf(command, "sha256sum %s/%s", folder_path, "FC-Release");
+    }
 
     FILE *fp = popen(command, "r");
     if (fp == NULL)
     {
-        printf("popen errno = %d\n", errno);
-        return 0;
+        return -1;
     }
 
     char buff[100];
     fscanf(fp, "%s", buff);
+    pclose(fp);
+
+    /**< Read reference from the cksm.txt. */
+    char reference_path[100];
+    strcpy(reference_path, folder_path);
+    strcat(reference_path, "/cksm.txt");
+
+    fp = fopen(reference_path, "r");
+    if (fp == NULL)
+    {
+        return -1;
+    }
+    char reference[100];
+    fscanf(fp, "%s", reference);
+    fclose(fp);
     
     int retval = strncmp(buff, reference, 64);
 
@@ -29,6 +52,5 @@ int check_sha256sum(char *reference, char *path)
         retval = -1;
     }
 
-    pclose(fp);
     return retval;
 }
