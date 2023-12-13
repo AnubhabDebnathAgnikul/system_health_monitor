@@ -24,14 +24,14 @@
 
 #define OP_FAIL 2
 #define MEMORY_FAULT 3
-#define SUCCESS 1
-#define FAIL 0
+#define SUCCESS 0
+#define FAIL -1
 #define MAX_BUF_SIZE 256
 
 int driver(int N);
 
 /*UART info*/
-// int UART_info();
+int UART_info();
 
 /* assigns the cpu and memory division factor
 dynamically allocates memory and calls march test 
